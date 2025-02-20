@@ -56,12 +56,12 @@ void setup()
 
   sensor_dht.sensor_init();
   digitalWrite(Fan_STOP, 0);
+
  // пин тахометра вентилятора подтягиваем к VCC
   pinMode(Fan_Pin_Tach, INPUT_PULLUP);
 
  // настраиваем прерывание
- 
- attachInterrupt(digitalPinToInterrupt(Fan_Pin_Tach), HandleInterrupt, FALLING);
+  attachInterrupt(digitalPinToInterrupt(Fan_Pin_Tach), HandleInterrupt, FALLING);
   
 
   NTP.onError([]()

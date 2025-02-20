@@ -3,7 +3,7 @@
 
 #define Fan_PWM_FRQ 25000
 
-#define Fan_RPM_Update_Period 1000
+
 
 
 
