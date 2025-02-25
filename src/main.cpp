@@ -2,7 +2,7 @@
 #include "DHT.h"
 #include <Adafruit_Sensor.h>
 #include "SensorDHT.h"
-
+#include <Stamp.h>
 #include "GyverPID.h"
 #include <ESP8266WiFi.h>
 #include "Fan.h"
@@ -130,11 +130,24 @@ void loop()
   // ReleState = not ReleState
   // GPIO.output(RELE_PIN, ReleState)
   
+  Datime dt = NTP;
+
   Datime ds(2025, 1, 30, 14, 14, 30);
-  start_second =  ds.daySeconds();
+  Datime dn(2025, 1, 30, 14, 14, 40);
+   
+  start_second =  ds.daySeconds(); 
+  stop_second =  dn.daySeconds();
+  // проверить 
+  //stop_second =  start_second + work_time;
+  
   NTP.daySeconds();
+  
+  uint32_t ss = StampUtils::timeToSeconds(12, 35, 0);
   //stop_second = ds.addSeconds(work_timer);
   //включение освещения
+
+  Stamp s;
+  Datime d = s.now(); 
 
   if ( NTP > DaySeconds(12, 35, 0) && ()  && !ReleFlag)
   {
