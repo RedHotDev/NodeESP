@@ -24,7 +24,7 @@ GyverPID regulator(25, 0.5, 0, 10);
 SensorDHT sensor_dht(DHT_PIN);
 Fan fan(Fan_Pin_PWM,  Fan_STOP);
 
-
+uint32_t ds;
 
 // wifi
 #define WLAN_SSID "MERCUSYS"
@@ -79,11 +79,14 @@ void setup()
 
 
 bool ReleFlag = 0;
-unsigned long work_time = 10000;
+unsigned long work_time = 10000; //время работы в сек
 unsigned long work_timer;
+uint32_t start_second;
+uint32_t stop_second;
 
 void loop()
 {
+  
 
   // DHT
   if (millis() - timer >= DHT_PERIOD)
@@ -118,17 +121,27 @@ void loop()
     // fan.SetFanLevel(20);
   }
 
+  // now = datetime.datetime.now()
+  // todayon = now.replace(hour=time_obj.tm_hour,
+  //                       minute=time_obj.tm_min, second=0, microsecond=0)
+  // seconds = (now - todayon).total_seconds()
+
   // if now >= todayon and seconds < timeReleWork and not ReleState or now > todayon and seconds > timeReleWork and ReleState:
   // ReleState = not ReleState
   // GPIO.output(RELE_PIN, ReleState)
+  
+  Datime ds(2025, 1, 30, 14, 14, 30);
+  start_second =  ds.daySeconds();
+  NTP.daySeconds();
+  //stop_second = ds.addSeconds(work_timer);
+  //включение освещения
 
-  if (NTP > DaySeconds(12, 35, 0) && !ReleFlag)
+  if ( NTP > DaySeconds(12, 35, 0) && ()  && !ReleFlag)
   {
     ReleFlag = true;
     Serial.println("ON");
-
     Datime work_timer = NTP;
-    work_timer.addSeconds(60);
+    work_timer.addSeconds(work_time);
   }
 
   if (NTP > work_timer && ReleFlag)
