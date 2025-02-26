@@ -15,7 +15,7 @@
 #define SETPOINT 24.5
 
 uint32_t timer, timer_fan = 0; // переменная таймера
-#define DHT_PERIOD 1000        // период опроса DHT
+#define PERIOD_SECOND 1000        // период опроса DHT
 #define FAN_PERIOD 10          // период опроса Fan
 
 // PID регулятор
@@ -72,8 +72,8 @@ void setup()
               });
 
   NTP.begin(3);
-  NTP.updateNow();
-
+  //NTP.updateNow();
+ 
 };
 
 
@@ -95,6 +95,7 @@ uint8_t s;
 
 void loop()
 {
+  NTP.tick();
   now_second = NTP.daySeconds();
  
    
@@ -102,7 +103,7 @@ void loop()
   stop_second =  start_second + work_time;
 
   // DHT
-  if (millis() - timer >= DHT_PERIOD)
+  if (millis() - timer >= PERIOD_SECOND)
   {                   // таймер 1000ms
     timer = millis(); // сброс
   
@@ -118,6 +119,7 @@ void loop()
     Serial.print(fan.getRPM(), DEC);
     Serial.print(" reg ");
     Serial.println(regulator.getResultTimer(), DEC); 
+    
   }
 
   if (millis() - timer_fan >= FAN_PERIOD)
@@ -142,15 +144,32 @@ void loop()
   }
 
    // включение полива
+  // if (NTP.newSecond()) {
+  //   s=s+1;
+  //   Serial.println(s);
+  //  if (s > period_second && !ReleRainFlag) {
+  //    s=0;
+  //    ReleRainFlag = true;
+  //    Serial.println("rain on");
+  //  }
+  //  if (s>work_raine && ReleRainFlag) { 
+  //    ReleRainFlag = false;
+  //    Serial.println("rain off");
+  //    s=0;
+  //  }
+  // }
+
+   // включение полива
   if (NTP.newSecond()) {
-     s=+1;
-    if (s > period_second && !ReleRainFlag) {
-      s=0;
-      ReleRainFlag = true;
-    }
-    if (s>work_raine && ReleRainFlag)  
-      ReleRainFlag = false;
-      s=0;
+    s++;
+    Serial.println(s);
+   if ((s > period_second && !ReleRainFlag) || (s>work_raine && ReleRainFlag))  {
+     s=0;
+     ReleRainFlag = !ReleRainFlag;
+     Serial.println("rain flag ");
+     Serial.print(ReleRainFlag);
+   }
+   
   }
 
 
