@@ -78,7 +78,7 @@ void setup()
 
 
 
-bool ReleFlag = 0;
+bool ReleLightFlag = 0; // флаг включения реле
 unsigned long work_time = 25; //время работы в сек
 // unsigned long work_timer;
 uint32_t start_second;
@@ -86,8 +86,12 @@ uint32_t stop_second;
 uint32_t second;
 uint32_t now_second;
 
+uint32_t period_second = 60; // период полива
+uint8_t work_raine = 10; // период полива
+bool ReleRainFlag = 0; // флаг включения реле полива
 Datime ds(2025, 1, 30, 21, 18, 00);  // время включения освещения
 
+uint8_t s;
 
 void loop()
 {
@@ -125,17 +129,30 @@ void loop()
   }
 
   // включение освещения
-  if (now_second > start_second && now_second < stop_second && !ReleFlag )
+  if (now_second > start_second && now_second < stop_second && !ReleLightFlag )
   {
-    ReleFlag = true;
+    ReleLightFlag = true;
     Serial.println("ON");
   }
 
-  if (now_second > stop_second && ReleFlag  )
+  if (now_second > stop_second && ReleLightFlag  )
   {
-    ReleFlag = false;
+    ReleLightFlag = false;
     Serial.println("OFF");
   }
+
+   // включение полива
+  if (NTP.newSecond()) {
+     s=+1;
+    if (s > period_second && !ReleRainFlag) {
+      s=0;
+      ReleRainFlag = true;
+    }
+    if (s>work_raine && ReleRainFlag)  
+      ReleRainFlag = false;
+      s=0;
+  }
+
 
 
 }
