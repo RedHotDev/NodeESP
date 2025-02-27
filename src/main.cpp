@@ -91,7 +91,7 @@ uint8_t work_raine = 10; // период полива
 bool ReleRainFlag = 0; // флаг включения реле полива
 Datime ds(2025, 1, 30, 21, 18, 00);  // время включения освещения
 
-uint8_t s;
+
 
 void loop()
 {
@@ -144,6 +144,19 @@ void loop()
   }
 
    // включение полива
+  if (NTP.newSecond()) {
+    static uint8_t s = 0;
+    s++;
+    Serial.println(s);
+   if ((s > period_second && !ReleRainFlag) || (s>work_raine && ReleRainFlag))  {
+     s=0;
+     ReleRainFlag = !ReleRainFlag;
+     Serial.println("rain flag ");
+     Serial.print(ReleRainFlag);
+   }  
+  }
+
+   // включение полива
   // if (NTP.newSecond()) {
   //   s=s+1;
   //   Serial.println(s);
@@ -158,20 +171,5 @@ void loop()
   //    s=0;
   //  }
   // }
-
-   // включение полива
-  if (NTP.newSecond()) {
-    s++;
-    Serial.println(s);
-   if ((s > period_second && !ReleRainFlag) || (s>work_raine && ReleRainFlag))  {
-     s=0;
-     ReleRainFlag = !ReleRainFlag;
-     Serial.println("rain flag ");
-     Serial.print(ReleRainFlag);
-   }
-   
-  }
-
-
 
 }
