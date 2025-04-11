@@ -3,7 +3,7 @@
 
 #define Fan_PWM_FRQ 25000
 
-
+#define Fan_RPM_Update_Period 1000
 
 
 
@@ -59,8 +59,7 @@ void tick() {
 
      // получить обороты в минуту
      uint32_t getRPM() {
-      return getTime() ? (60000000ul / prd) : 0;
+      return getTime() ? ((60000000ul / prd)/2) : 0;
   };
 
 };
-

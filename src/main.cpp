@@ -2,38 +2,74 @@
 #include "DHT.h"
 #include <Adafruit_Sensor.h>
 #include "SensorDHT.h"
-
+#include "RelyWarm.h"
+#include "RelyRain.h"
 #include "GyverPID.h"
+
 #include <ESP8266WiFi.h>
 #include "Fan.h"
 #include <GyverNTP.h>
-
-#define Fan_Pin_PWM 15
-#define Fan_Pin_Tach 12
-#define Fan_STOP 5
-
-#define SETPOINT 24.5
-
-uint32_t timer, timer_fan = 0; // переменная таймера
-#define PERIOD_SECOND 1000        // период опроса DHT
-#define FAN_PERIOD 10          // период опроса Fan
-
-// PID регулятор
-
-GyverPID regulator(25, 0.5, 0, 10);
-SensorDHT sensor_dht(DHT_PIN);
-Fan fan(Fan_Pin_PWM,  Fan_STOP);
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
 
 
+#define Fan_Pin_PWM 15 //вентилятор PWM
+#define Fan_Pin_Tach 12 //вентилятор тахометр
+#define Fan_STOP 5 //вентилятор реле на остановку 
+#define  RELAY_PIN_WARM 16 //реле нагрева
+#define  RELAY_PIN_RAIN 2 //реле полива
+#define  RELAY_PIN_LIGHT 14 //реле освещения
+
+#define SETPOINT 24 // установка
 
 // wifi
 #define WLAN_SSID "MERCUSYS"
 #define WLAN_PASS "alcm7bvn"
 
+
+uint32_t timer, timer_fan = 0; // переменная таймера
+#define PERIOD_SECOND 1000        //  таймер период опроса 1 сек
+#define FAN_PERIOD 10          // период опроса Fan
+
+GyverPID regulator(25, 0.5, 0, 10); // PID регулятор
+SensorDHT sensor_dht(DHT_PIN); // Сенсор
+Fan fan(Fan_Pin_PWM,  Fan_STOP); // вентилятор
+
+
+
+//mqtt
+const char* mqtt_server = "test.mosquitto.org";
+const int mqtt_port = 1883;
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+JsonDocument JSONencoder;
+String jsonout;
+Datime work_timer;
+
+// флаги
+bool relayStateWarm = false; // флаг реле обогрева
+bool relayStateRain = false; // флаг реле полива
+bool relayStateLight = false; // флаг  реле освещения
+
+unsigned long work_time = 25; //время работы освещения в сек
+
+Datime ds(2025, 1, 30, 21, 18, 00);  // время включения освещения
+uint32_t start_second =  ds.daySeconds(); // время включения освещения в сек с нач суток
+
+uint32_t stop_second =  start_second + work_time; // время отключения освещения в сек
+
+uint32_t period_second = 60; // период полива
+uint8_t work_raine = 10; // время работы полива 
+
+uint32_t second;
+uint32_t now_second;
+
+
 void ICACHE_RAM_ATTR HandleInterrupt() { 
   fan.tick();
 };
-Datime work_timer;
 
 void setup()
 {
@@ -55,11 +91,17 @@ void setup()
   regulator.setpoint = SETPOINT;
   Serial.begin(115200);
 
+  //Rely  
+  
+
   sensor_dht.sensor_init();
   digitalWrite(Fan_STOP, 0);
  // пин тахометра вентилятора подтягиваем к VCC
   pinMode(Fan_Pin_Tach, INPUT_PULLUP);
-
+  
+  pinMode(RELAY_PIN_LIGHT, OUTPUT);
+  pinMode(RELAY_PIN_RAIN, OUTPUT);
+  pinMode(RELAY_PIN_WARM, OUTPUT);
  // настраиваем прерывание
  
  attachInterrupt(digitalPinToInterrupt(Fan_Pin_Tach), HandleInterrupt, FALLING);
@@ -74,23 +116,57 @@ void setup()
   NTP.begin(3);
   //NTP.updateNow();
  
+  client.setServer(mqtt_server, mqtt_port);
+  if (client.connect("ESP"))
+    {
+      Serial.println("connected");
+    }
+    else
+    {
+      Serial.print("failed with state ");
+      Serial.println(client.state());
+      delay(2000);
+    }            
 };
 
+void printPort() {
+  // вывод сообщения
+  Serial.print("DataTime: ");
+  Serial.print(NTP.toString());
+  Serial.print("T: ");
+  Serial.print(sensor_dht.get_DHT().Temperature);
+  Serial.print("H: ");
+  Serial.print(sensor_dht.get_DHT().Humidity);
+  Serial.print("Fan RPM: ");
+  Serial.print(fan.getRPM(), DEC);
+  Serial.print("FanReg: ");
+  Serial.println(regulator.getResultTimer(), DEC);
+  Serial.print("Light: ");
+  Serial.print(relayStateLight);
+  Serial.print("Rain: ");
+  Serial.print(relayStateRain);
+  Serial.print("Warm: ");
+  Serial.print(relayStateWarm);
+}
 
+void mqttSend() {
+  // отправка mqtt
+  JSONencoder["DateStamp"] = NTP.toString();
+  JSONencoder["T"] = sensor_dht.get_DHT().Temperature;
+  JSONencoder["H"] = sensor_dht.get_DHT().Humidity;
+  JSONencoder["Fan"] = fan.getRPM();
+  JSONencoder["FanReg"] = regulator.getResultTimer();
+  JSONencoder["Light"] = relayStateLight;
+  JSONencoder["Rain"] = relayStateRain;
+  JSONencoder["Warm"] = relayStateWarm;
 
-bool ReleLightFlag = 0; // флаг включения реле
-unsigned long work_time = 25; //время работы в сек
-// unsigned long work_timer;
-uint32_t start_second;
-uint32_t stop_second;
-uint32_t second;
-uint32_t now_second;
+  // serializeJson(JSONencoder, Serial);
 
-uint32_t period_second = 60; // период полива
-uint8_t work_raine = 10; // период полива
-bool ReleRainFlag = 0; // флаг включения реле полива
-Datime ds(2025, 1, 30, 21, 18, 00);  // время включения освещения
+  serializeJson(JSONencoder, jsonout);
+  Serial.println(jsonout);
 
+  client.publish("topic_esp", jsonout.c_str());
+}
 
 
 void loop()
@@ -98,28 +174,60 @@ void loop()
   NTP.tick();
   now_second = NTP.daySeconds();
  
-   
-  start_second =  ds.daySeconds(); 
-  stop_second =  start_second + work_time;
+  // mqtt
+  if(!client.loop())
+    client.connect("ESP8266Client");
 
-  // DHT
+  
   if (millis() - timer >= PERIOD_SECOND)
   {                   // таймер 1000ms
     timer = millis(); // сброс
-  
-    Serial.print(" DataTime: ");
-    Serial.print(start_second-now_second);
-    Serial.print(" DataTime: ");
-    Serial.print(NTP.toString());
-    Serial.print(" H: ");
-    Serial.print(sensor_dht.get_DHT().Humidity);
-    Serial.print(" T: ");
-    Serial.print(sensor_dht.get_DHT().Temperature);
-    Serial.print(" Fan RPM:");
-    Serial.print(fan.getRPM(), DEC);
-    Serial.print(" reg ");
-    Serial.println(regulator.getResultTimer(), DEC); 
+
+    // Изменение температуры
+    static float T; 
+    if ((sensor_dht.get_DHT().Temperature > T + 1)
+      || (sensor_dht.get_DHT().Temperature > T - 1))
+      {
+        mqttSend();
+        T = sensor_dht.get_DHT().Temperature;
+    }
+
     
+
+    // включение полива
+    if (relayStateRain != releRain(period_second, work_raine))
+    {
+      relayStateRain = releRain(period_second, work_raine);
+      digitalWrite(RELAY_PIN_RAIN, relayStateRain);
+      mqttSend();
+      }
+
+
+    // включение обогрева
+    if (relayStateWarm != releWarm(sensor_dht.get_DHT().Temperature, SETPOINT))
+    {
+      relayStateWarm = releWarm(sensor_dht.get_DHT().Temperature, SETPOINT);
+      Serial.println(relayStateWarm);
+      digitalWrite(RELAY_PIN_WARM, relayStateWarm);
+      mqttSend();
+    }
+    printPort();
+  }
+
+
+  // включение освещения
+  if (now_second > start_second && now_second < stop_second && !relayStateLight)
+  {
+    relayStateLight = true;
+    digitalWrite(RELAY_PIN_LIGHT, relayStateLight);
+    mqttSend();
+  }
+
+  if (now_second > stop_second && relayStateLight)
+  {
+    relayStateLight = false;
+    digitalWrite(RELAY_PIN_LIGHT, relayStateLight);
+    mqttSend();
   }
 
   if (millis() - timer_fan >= FAN_PERIOD)
@@ -127,49 +235,6 @@ void loop()
     timer_fan = millis(); // сброс
     regulator.input = sensor_dht.get_DHT().Temperature;
     fan.SetFanLevel(regulator.getResultTimer());
-    //fan.SetFanLevel(0);
+    // fan.SetFanLevel(0);
   }
-
-  // включение освещения
-  if (now_second > start_second && now_second < stop_second && !ReleLightFlag )
-  {
-    ReleLightFlag = true;
-    Serial.println("ON");
-  }
-
-  if (now_second > stop_second && ReleLightFlag  )
-  {
-    ReleLightFlag = false;
-    Serial.println("OFF");
-  }
-
-   // включение полива
-  if (NTP.newSecond()) {
-    static uint8_t s = 0;
-    s++;
-    Serial.println(s);
-   if ((s > period_second && !ReleRainFlag) || (s>work_raine && ReleRainFlag))  {
-     s=0;
-     ReleRainFlag = !ReleRainFlag;
-     Serial.println("rain flag ");
-     Serial.print(ReleRainFlag);
-   }  
-  }
-
-   // включение полива
-  // if (NTP.newSecond()) {
-  //   s=s+1;
-  //   Serial.println(s);
-  //  if (s > period_second && !ReleRainFlag) {
-  //    s=0;
-  //    ReleRainFlag = true;
-  //    Serial.println("rain on");
-  //  }
-  //  if (s>work_raine && ReleRainFlag) { 
-  //    ReleRainFlag = false;
-  //    Serial.println("rain off");
-  //    s=0;
-  //  }
-  // }
-
 }
