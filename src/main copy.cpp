@@ -20,13 +20,12 @@
 #define  RELAY_PIN_RAIN 2 //реле полива
 #define  RELAY_PIN_LIGHT 14 //реле освещения
 
-
+#define SETPOINT 24 // установка
 
 // wifi
 #define WLAN_SSID "MERCUSYS"
 #define WLAN_PASS "alcm7bvn"
 
-uint8_t setpoint = 24; // установка
 
 uint32_t timer, timer_fan = 0; // переменная таймера
 #define PERIOD_SECOND 1000        //  таймер период опроса 1 сек
@@ -205,13 +204,13 @@ void loop()
 
 
     // включение обогрева
-      if (relayStateWarm != releWarm(sensor_dht.get_DHT().Temperature, setpoint))
-      {
-        relayStateWarm = releWarm(sensor_dht.get_DHT().Temperature, setpoint);
-        Serial.println(relayStateWarm);
-        digitalWrite(RELAY_PIN_WARM, relayStateWarm);
-        mqttSend();
-      }
+    if (relayStateWarm != releWarm(sensor_dht.get_DHT().Temperature, SETPOINT))
+    {
+      relayStateWarm = releWarm(sensor_dht.get_DHT().Temperature, SETPOINT);
+      Serial.println(relayStateWarm);
+      digitalWrite(RELAY_PIN_WARM, relayStateWarm);
+      mqttSend();
+    }
     printPort();
   }
 
