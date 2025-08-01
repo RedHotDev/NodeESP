@@ -1,30 +1,32 @@
 #pragma once
 
 // Пины
-#define DHT_PIN 4
-#define Fan_Pin_PWM 15
-#define Fan_Pin_Tach 12
-#define Fan_STOP 5
-#define RELAY_PIN_WARM 16
-#define RELAY_PIN_RAIN 2
-#define RELAY_PIN_LIGHT 14
+constexpr int DHT_PIN = 4;
+constexpr int FAN_PWM_PIN = 15;
+constexpr int FAN_TACH_PIN = 12;
+constexpr int FAN_STOP_PIN = 5;
+constexpr int RELAY_WARM_PIN = 16;
+constexpr int RELAY_RAIN_PIN = 2;
+constexpr int RELAY_LIGHT_PIN = 14;
 
 // WiFi
-#define WLAN_SSID "MERCUSYS"
-#define WLAN_PASS "alcm7bvn"
-
-// Тайминги
-#define PERIOD_SECOND 1000
-#define FAN_PERIOD 10
-
-// Параметры системы
-const uint8_t SETPOINT_TEMP = 24;
-const unsigned long WORK_TIME = 25; // сек работы освещения
-const uint32_t RAIN_PERIOD = 60;    // период полива (сек)
-const uint8_t RAIN_WORK_TIME = 10;  // время полива (сек)
+constexpr const char *WLAN_SSID = "MERCUSYS";
+constexpr const char *WLAN_PASS = "alcm7bvn";
 
 // MQTT
-const char *MQTT_SERVER = "test.mosquitto.org";
-const int MQTT_PORT = 1883;
-const char *MQTT_CLIENT_NAME = "ESP8266Client";
-const char *MQTT_TOPIC = "topic_esp";
+constexpr const char *MQTT_SERVER = "m8.wqtt.ru";
+constexpr int MQTT_PORT = 20606;
+constexpr const char *MQTT_USER = "u_BJIUEH";
+constexpr const char *MQTT_PASS = "jlNoV6gO";
+
+// Тайминги
+constexpr int PERIOD_SECOND = 1000;
+constexpr int FAN_PERIOD = 10;
+
+// Глобальные переменные (объявлены в main.cpp)
+extern int setPoint;
+extern int start_second;
+extern int stop_second;
+extern int period_second;
+extern int work_raine;
+extern int work_time;
